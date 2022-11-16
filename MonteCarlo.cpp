@@ -85,6 +85,8 @@ int main()
     mt19937 generator {rng_device()};
     // Init uniform distribution
     uniform_real_distribution<double> distribution (0, 1);
+
+    /* A1
     // Lambda to draw random number
     auto gen_from_distr = [&]() { return distribution(generator); };
 
@@ -115,6 +117,22 @@ int main()
     hist_pT.write(fout);
     fout.close();
     std::cout << "written to pT.txt" << std::endl;
-    
+    */
+
+    // A2
+    // Init normal distribution for detector resolution
+    normal_distribution<double> det_distribution (2000, 200);
+
+    // 1000 measurements noise only
+    std::cout << "det: 1000 entries:\n";
+    Histogram hist_det {1000, 3000, 40};
+    for (size_t n = 0; n < 1000; ++n) {
+        hist_det.fill(det_distribution(generator));
+    }
+    std::ofstream fout_det("det.txt");
+    hist_det.write(fout_det);
+    fout_det.close();
+    std::cout << "written to det.txt" << std::endl;
+
     return 0;
 }
