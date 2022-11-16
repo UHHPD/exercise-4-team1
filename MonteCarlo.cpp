@@ -3,6 +3,7 @@
 #include <cmath>
 #include <random>
 #include <vector>
+#include <algorithm>
 
 using namespace std; // bruh
 
@@ -45,6 +46,10 @@ public:
         }
     }
 
+    size_t counts() const {
+        return std::accumulate(m_counts.begin(), m_counts.end(), 0.);
+    }
+
     /// Writes the contents of the histogram to `out`.
     void write(ostream &out) const
     {
@@ -75,6 +80,17 @@ Vec randomVector(mt19937 &generator, double norm)
     result.y = norm * sin(phi) * sin(acos(ctheta));
     result.z = norm * ctheta;
     return result;
+}
+
+double pT(Vec& vec) {
+    return sqrt(pow(vec.x, 2) + pow(vec.y, 2));
+}
+
+double absCosTheta(Vec& vec, double norm = 0.) {
+    if (norm <= 0.) {
+        norm = sqrt(pow(vec.x, 2) + pow(vec.y, 2) + pow(vec.z, 2));
+    }
+    return abs(vec.z / norm);
 }
 
 int main()
@@ -110,8 +126,7 @@ int main()
     Histogram hist_pT {0., 50., 50};
     for(size_t n = 0; n < 1000; ++n) {
         auto vec = randomVector(generator, 50);
-        auto pT = sqrt(pow(vec.x, 2) + pow(vec.y, 2));
-        hist_pT.fill(pT);
+        hist_pT.fill(pT(vec));
     }
     std::ofstream fout("pT.txt");
     hist_pT.write(fout);
@@ -123,8 +138,8 @@ int main()
     // Init normal distribution for detector resolution
     normal_distribution<double> det_distribution (2000, 200);
 
-    // 1000 measurements noise only
-    std::cout << "det: 1000 entries:\n";
+    // 1000 measurements
+    std::cout << "det: 1000 measurements:\n";
     Histogram hist_det {1000, 3000, 40};
     for (size_t n = 0; n < 1000; ++n) {
         hist_det.fill(det_distribution(generator));
@@ -133,6 +148,23 @@ int main()
     hist_det.write(fout_det);
     fout_det.close();
     std::cout << "written to det.txt" << std::endl;
+
+    // 1000 measurements with cuts
+    std::cout << "det: 1000 measurements w/ det eff:\n";
+    Histogram hist_det_deff {500, 1500, 40};
+    for (size_t n = 0; n < 1000; ++n) {
+        auto p = 0.5 * det_distribution(generator);
+        auto vec = randomVector(generator, p);
+        auto pT_ = pT(vec);
+        if (!(pT_ < 500 || absCosTheta(vec, p) > 0.98)) {
+            hist_det_deff.fill(pT_);
+        }
+    }
+    std::ofstream fout_det_deff("det_deff.txt");
+    hist_det_deff.write(fout_det_deff);
+    fout_det_deff.close();
+    std::cout << "written to det_deff.txt\n";
+    std::cout << "detection efficiency: " << hist_det_deff.counts() / 1000. << std::endl;
 
     return 0;
 }
