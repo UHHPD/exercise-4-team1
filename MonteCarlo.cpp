@@ -93,6 +93,10 @@ double absCosTheta(Vec& vec, double norm = 0.) {
     return abs(vec.z / norm);
 }
 
+double Finv(double x) {
+    return 1000 / sqrt(1 - x);
+}
+
 int main()
 {
     // RNG devic for random seed
@@ -138,7 +142,7 @@ int main()
     // Init normal distribution for detector resolution
     normal_distribution<double> det_distribution (2000, 200);
 
-    // 1000 measurements
+    // 2a: 1000 measurements
     std::cout << "det: 1000 measurements:\n";
     Histogram hist_det {1000, 3000, 40};
     for (size_t n = 0; n < 1000; ++n) {
@@ -149,15 +153,15 @@ int main()
     fout_det.close();
     std::cout << "written to det.txt" << std::endl;
 
-    // 1000 measurements with cuts
+    // 2b: 1000 measurements with cuts
     std::cout << "det: 1000 measurements w/ det eff:\n";
-    Histogram hist_det_deff {500, 1500, 40};
+    Histogram hist_det_deff {1000, 3000, 40};
     for (size_t n = 0; n < 1000; ++n) {
-        auto p = 0.5 * det_distribution(generator);
+        auto m = det_distribution(generator);
+        auto p = 0.5 * m;
         auto vec = randomVector(generator, p);
-        auto pT_ = pT(vec);
-        if (!(pT_ < 500 || absCosTheta(vec, p) > 0.98)) {
-            hist_det_deff.fill(pT_);
+        if (!(pT(vec) < 500 || absCosTheta(vec, p) > 0.98)) {
+            hist_det_deff.fill(m);
         }
     }
     std::ofstream fout_det_deff("det_deff.txt");
@@ -165,6 +169,34 @@ int main()
     fout_det_deff.close();
     std::cout << "written to det_deff.txt\n";
     std::cout << "detection efficiency: " << hist_det_deff.counts() / 1000. << std::endl;
+
+    // 2c: SM Background
+    std::cout << "SM background:\n";
+    Histogram hist_sm_bg {1000, 3000, 40};
+    for (size_t n = 0; n < 30000; ++n) {
+        hist_sm_bg.fill(Finv(distribution(generator)));
+    }
+    std::ofstream fout_sm_bg("sm_bg.txt");
+    hist_sm_bg.write(fout_sm_bg);
+    fout_sm_bg.close();
+    std::cout << "written to sm_bg.txt" << std::endl;
+
+    // 2d: SM Background w/ det eff
+    std::cout << "SM background w/ det eff:\n";
+    Histogram hist_sm_bg_deff {1000, 3000, 40};
+    for (size_t n = 0; n < 30000; ++n) {
+        auto m = Finv(distribution(generator));
+        auto p = 0.5 * m;
+        auto vec = randomVector(generator, p);
+        if (!(pT(vec) < 500 || absCosTheta(vec, p) > 0.98)) {
+            hist_sm_bg_deff.fill(m);
+        }
+    }
+    std::ofstream fout_sm_bg_deff("sm_bg_deff.txt");
+    hist_sm_bg_deff.write(fout_sm_bg_deff);
+    fout_sm_bg_deff.close();
+    std::cout << "written to sm_bg_deff.txt" << std::endl;
+    std::cout << "detection efficiency: " << hist_sm_bg_deff.counts() / 30000. << std::endl;
 
     return 0;
 }
