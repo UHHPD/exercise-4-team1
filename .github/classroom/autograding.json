@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Check that the code compiles and runs",
+      "setup": "",
+      "run": "g++ MonteCarlo.cpp -o MonteCarlo && ./MonteCarlo",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": null
+    }
+  ]
+}
