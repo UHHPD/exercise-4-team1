@@ -1,9 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <random>
 #include <vector>
 
-using namespace std;
+using namespace std; // bruh
 
 /**
  * A very simple vector type. It merely stores the x, y, and z components.
@@ -62,44 +63,58 @@ public:
  */
 Vec randomVector(mt19937 &generator, double norm)
 {
-    // Fill me in question 1.d!
+    // Init uniform distributions
+    uniform_real_distribution<double> phi_distribution (0, 2*M_PI);
+    uniform_real_distribution<double> ctheta_distribution (-1, 1);
+
+    auto phi = phi_distribution(generator);
+    auto ctheta = ctheta_distribution(generator);
 
     Vec result;
-    result.x = 0; // Zeroes are boring, better use some random values...
-    result.y = 0;
-    result.z = 0;
+    result.x = norm * cos(phi) * sin(acos(ctheta));
+    result.y = norm * sin(phi) * sin(acos(ctheta));
+    result.z = norm * ctheta;
     return result;
 }
 
 int main()
 {
-    // Short demo of how to use the "Vec" type defined above. You can delete or
-    // comment out this code if you wish.
-    Vec something; // Just like one would do "double x;"
-    something.x = 1;
-    something.y = -1;
-    something.z = 0;
+    // RNG devic for random seed
+    random_device rng_device {};
+    // Init RNG w/ random seed else every time same random numbers
+    mt19937 generator {rng_device()};
+    // Init uniform distribution
+    uniform_real_distribution<double> distribution (0, 1);
+    // Lambda to draw random number
+    auto gen_from_distr = [&]() { return distribution(generator); };
 
-    // We can print it
-    cout << "something   = " << something << endl;
+    // Print 5 random numbers
+    std::cout << "5 random numbers:\n";
+    for(size_t n = 0; n < 5; ++n) {
+        std::cout << gen_from_distr() << " ";
+    }
+    std::cout << std::endl;
 
-    // Or do something useful with the components
-    cout << "|something| = "
-         << sqrt(pow(something.x, 2) + pow(something.y, 2) + pow(something.z, 2))
-         << endl;
+    // Fill 1000 random numbers in a histogram w/ 10 bins
+    std::cout << "1000 random numbers:\n";
+    Histogram hist {0., 1., 10};
+    for(size_t n = 0; n < 1000; ++n) {
+        hist.fill(gen_from_distr());
+    }
+    hist.write(std::cout);
 
-    // Another short demo for the "Histogram" type defined above.
-    Histogram counts(0, 1, 10); // 10 intervals between 0 and 1
-
-    // Add some values to it
-    counts.fill(0.05); // First bin
-    counts.fill(0.06); // First bin too
-    counts.fill(0.3);  // Third bin
-    counts.fill(42);   // Out of range, will be ignored
-
-    // Print it to the terminal
-    cout << "Counts:" << endl;
-    counts.write(cout); // One can use an ofstream instead of cout to write to a file
-
+    // 1000 vectors
+    std::cout << "1000 random vectors:\n";
+    Histogram hist_pT {0., 50., 50};
+    for(size_t n = 0; n < 1000; ++n) {
+        auto vec = randomVector(generator, 50);
+        auto pT = sqrt(pow(vec.x, 2) + pow(vec.y, 2));
+        hist_pT.fill(pT);
+    }
+    std::ofstream fout("pT.txt");
+    hist_pT.write(fout);
+    fout.close();
+    std::cout << "written to pT.txt" << std::endl;
+    
     return 0;
 }
